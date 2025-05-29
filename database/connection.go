@@ -33,7 +33,7 @@ func Connect() {
 
 	//Auto migrate models
 
-	if err := DB.AutoMigrate(&models.User{}, &models.Episode{}, &models.Podcast{}); err != nil {
+	if err := DB.AutoMigrate(&models.User{}, &models.Episode{}, &models.Podcast{}, &models.Artist{}, &models.Album{}, &models.Like{}, &models.Playlist{}, &models.Track{}); err != nil {
 		log.Fatal("Migration failed:", err)
 	}
 }

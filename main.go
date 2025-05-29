@@ -21,6 +21,11 @@ func main() {
 	routes.RegisterEpisodeRoutes(router)
 	routes.PodcastRoutes(router)
 	routes.ArtistRoutes(router)
+	routes.AlbumRoutes(router)
+	routes.TrackRoutes(router)
+	routes.PlaylistRoutes(router)
+	routes.LikeRoutes(router)
+	routes.FollowRoutes(router)
 
 	port := os.Getenv("PORT")
 	if port == "" {
