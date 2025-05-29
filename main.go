@@ -19,7 +19,8 @@ func main() {
 
 	routes.UserRoutes(router)
 	routes.RegisterEpisodeRoutes(router)
-	routes.RegisterEpisodeRoutes(router)
+	routes.PodcastRoutes(router)
+	routes.ArtistRoutes(router)
 
 	port := os.Getenv("PORT")
 	if port == "" {

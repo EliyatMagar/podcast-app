@@ -15,6 +15,7 @@ func Register(c *gin.Context) {
 		Username string `json:"username"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Role     string `json:"role"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -32,7 +33,7 @@ func Register(c *gin.Context) {
 		Username: input.Username,
 		Email:    input.Email,
 		Password: hashedPassword,
-		Role:     "user", // default role
+		Role:     input.Role,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {

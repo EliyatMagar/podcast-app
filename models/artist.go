@@ -1,10 +1,14 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Artist struct {
 	ID        uint   `gorm:"primaryKey"`
-	Name      string `gorm:"unique; not null"`
+	UserID    uint   `gorm:"unique;not null"`
+	User      User   `gorm:"foreignKey:UserID"`
+	Name      string `gorm:"not null"`
 	Bio       string
 	ImageURL  string
 	Albums    []Album

@@ -8,46 +8,63 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreatePodcast handles POST /api/podcasts
+// CreatePodcast - POST /api/podcasts
 func CreatePodcast(c *gin.Context) {
-	role, _ := c.Get("role")
-	if role != "artist" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only artists can create podcasts"})
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	userID, _ := c.Get("userID")
 
+	// Check if user is an artist
+	var artist models.Artist
+	if err := database.DB.Where("user_id = ?", userID).First(&artist).Error; err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Artist profile not found"})
+		return
+	}
+
+	// Bind request body
 	var input models.Podcast
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	input.ArtistID = userID.(uint)
+	// Assign artist ID
+	input.ArtistID = artist.ID
+
 	if err := database.DB.Create(&input).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create podcast"})
 		return
 	}
 
-	c.JSON(http.StatusOK, input)
+	c.JSON(http.StatusCreated, input)
 }
 
+// GetAllPodcasts - GET /api/podcasts
 func GetAllPodcasts(c *gin.Context) {
 	var podcasts []models.Podcast
-	database.DB.Preload("Episodes").Find(&podcasts)
+	if err := database.DB.Preload("Artist").Find(&podcasts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch podcasts"})
+		return
+	}
 	c.JSON(http.StatusOK, podcasts)
 }
 
+// GetPodcastByID - GET /api/podcasts/:id
 func GetPodcastByID(c *gin.Context) {
-	var podcast models.Podcast
 	id := c.Param("id")
-	if err := database.DB.Preload("Episodes").First(&podcast, id).Error; err != nil {
+	var podcast models.Podcast
+
+	if err := database.DB.Preload("Artist").Preload("Episodes").First(&podcast, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Podcast not found"})
 		return
 	}
+
 	c.JSON(http.StatusOK, podcast)
 }
 
+// UpdatePodcast - PUT /api/podcasts/:id
 func UpdatePodcast(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	id := c.Param("id")
@@ -58,26 +75,33 @@ func UpdatePodcast(c *gin.Context) {
 		return
 	}
 
-	if podcast.ArtistID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to update this podcast"})
+	// Check ownership
+	var artist models.Artist
+	if err := database.DB.First(&artist, "user_id = ?", userID).Error; err != nil || artist.ID != podcast.ArtistID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to update this podcast"})
 		return
 	}
 
-	var input models.Podcast
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var updatedData models.Podcast
+	if err := c.ShouldBindJSON(&updatedData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	podcast.Title = input.Title
-	podcast.Description = input.Description
-	podcast.CoverURL = input.CoverURL
-	podcast.Category = input.Category
+	podcast.Title = updatedData.Title
+	podcast.Description = updatedData.Description
+	podcast.CoverURL = updatedData.CoverURL
+	podcast.Category = updatedData.Category
 
-	database.DB.Save(&podcast)
+	if err := database.DB.Save(&podcast).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update podcast"})
+		return
+	}
+
 	c.JSON(http.StatusOK, podcast)
 }
 
+// DeletePodcast - DELETE /api/podcasts/:id
 func DeletePodcast(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	id := c.Param("id")
@@ -88,11 +112,17 @@ func DeletePodcast(c *gin.Context) {
 		return
 	}
 
-	if podcast.ArtistID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to delete this podcast"})
+	// Check ownership
+	var artist models.Artist
+	if err := database.DB.First(&artist, "user_id = ?", userID).Error; err != nil || artist.ID != podcast.ArtistID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to delete this podcast"})
 		return
 	}
 
-	database.DB.Delete(&podcast)
+	if err := database.DB.Delete(&podcast).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete podcast"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Podcast deleted successfully"})
 }

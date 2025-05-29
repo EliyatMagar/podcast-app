@@ -7,14 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterPodcastRoutes(router *gin.Engine) {
-	r := router.Group("/api/podcasts")
-	r.Use(middleware.AuthMiddleware())
+func PodcastRoutes(router *gin.Engine) {
+	podcastGroup := router.Group("/api/podcasts")
 	{
-		r.POST("/", controllers.CreatePodcast)
-		r.GET("/", controllers.GetAllPodcasts)
-		r.GET("/:id", controllers.GetPodcastByID)
-		r.PUT("/:id", controllers.UpdatePodcast)
-		r.DELETE("/:id", controllers.DeletePodcast)
+		podcastGroup.GET("", controllers.GetAllPodcasts)
+		podcastGroup.GET("/:id", controllers.GetPodcastByID)
+
+		// Protected routes
+		podcastGroup.Use(middleware.AuthMiddleware())
+		{
+			podcastGroup.POST("", controllers.CreatePodcast)
+			podcastGroup.PUT("/:id", controllers.UpdatePodcast)
+			podcastGroup.DELETE("/:id", controllers.DeletePodcast)
+		}
 	}
 }
